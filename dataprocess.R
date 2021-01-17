@@ -1,5 +1,4 @@
 rm(list = ls())
-setwd("D:/RA-POLYU/TB")
 Sys.setlocale("LC_ALL", "Chinese")
 
 source("function.R")

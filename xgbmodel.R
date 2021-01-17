@@ -1,5 +1,4 @@
 #rm(list = ls())
-setwd("D:/RA-POLYU/TB")
 ######choose data for model#########
 source("function.R")
 
