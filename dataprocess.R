@@ -113,7 +113,7 @@ com.dat.v2<-com.dat.v2[-which(com.dat.v2$id=="0003981768")[1],]
 com.dat.v2<-com.dat.v2[-which(com.dat.v2$id=="0001587553")[1],]
 com.dat.v2<-com.dat.v2[-which(com.dat.v2$id=="0003894186"),]
 
-data3 <- read_xlsx("建模对象2020.12.30.xlsx",sheet = 1)
+data3 <- read_xlsx("建模对象2020.12.30 -z.xlsx",sheet = 1)
 data4 <- read_xlsx("建模对象2020.12.30 -z.xlsx",sheet = 4)
 colnames(data3)[c(16,13,19,12,17)]<-c("id","report_date","alt_yn","alt_value","start_time")
 data3 <- filter(data3,is.na(alt_value)==F)
@@ -122,6 +122,7 @@ data3$alt_yn[which(data3$alt_value>40)]<-1
 newid<-apply(data3$...20[data3$report_date>="2019-01-01"] %>% as.matrix, 1, same_length)
 data3$id[which(data3$report_date>="2019-01-01")]<-newid
 data3<-data3[-16623,] #delet wired case
+
 ALT_result <- lapply(com.dat.v2$id%>%unique()%>%as.list(),
             function(x){data3%>%filter(id==x)%>%
                 select(c(id,alt_value,alt_yn,report_date,start_time))->out;

@@ -1,4 +1,4 @@
-#rm(list = ls())
+rm(list = ls())
 ######choose data for model#########
 source("function.R")
 
@@ -28,7 +28,7 @@ data.validat.y<-model.y[model.variables$date>=cut_date]
 
 # Folds are created on the basis of target variable
 
-###### get importance #########
+###### get order of importance #########
 
 importance_combine <- NULL
 for(i in 1:500){
@@ -49,7 +49,6 @@ imp_plot <- read.csv("importance_sum.csv")[,-1]
 imp_plot <- imp_plot[1:10,]
 imp_plot$Feature%<>%as.factor()
 
-getPalette = colorRampPalette(brewer.pal(10, "Set1"))
 ggplot(data=imp_plot,mapping=aes(x=reorder(Feature, -mean),y=mean,fill=Feature))+
   geom_bar(stat="identity")+
   scale_fill_brewer(palette = "RdBu") +
@@ -58,6 +57,7 @@ ggplot(data=imp_plot,mapping=aes(x=reorder(Feature, -mean),y=mean,fill=Feature))
   ylab("Relative Rmpotortance")+
   theme_few()
 ggsave("rr.tiff",dpi=300,scale=1.3)
+
 ###### feature select #########
 
 feature_select<-NULL;auc.comb<-NULL
@@ -90,7 +90,7 @@ dtrain <- xgb.DMatrix(data = data.train.x[,feature_select]%>%as.matrix(),
 dtest <- xgb.DMatrix(data = data.validat.x[,feature_select]%>%as.matrix(),
                      label= data.validat.y%>%as.matrix())
 
-######### model ref without Tuning##########
+######### model (without Tuning) ##########
 #single tree
 model <- xgboost(data = dtrain,          
                  #max.depth = 4, 
@@ -98,6 +98,9 @@ model <- xgboost(data = dtrain,
                  #gamma = 1,
                  objective = "binary:logistic", 
                  verbose = 0)
+
+#results
+
 pred <- predict(model, dtest)
 xgbpred <- ifelse (pred >= 0.5,1,0)
 caret::confusionMatrix (xgbpred%>%as.factor(), data.validat.y%>%as.factor())
@@ -109,7 +112,12 @@ xgb.plot.tree(model = model)
 pred.o <- predict(model, dtrain)
 xgbpred.o <- ifelse (pred.o >= 0.5,1,0)
 caret::confusionMatrix (xgbpred.o%>%as.factor(), data.train.y%>%as.factor())
+
 ###### model evaluation #########
+###### evaluate the early warning duration
+data3 <- read_xlsx("建模对象2020.12.30.xlsx",sheet = 1)
+data4 <- read_xlsx("建模对象2020.12.30 -z.xlsx",sheet = 4)
+
 data.frame(xgbpred,data.validat.y) %>%
   mutate(Y_N=ifelse(xgbpred==1&data.validat.y==1,1,0)) -> result_eva
 model.variables$id[model.variables$date>=cut_date] %>% .[result_eva$Y_N==1] -> eva
@@ -227,6 +235,9 @@ ggplot(shap_df,
   ylab(NULL)
 
 
+############# following parts include 
+############# 1) 2 tuning functions (optinal)
+############# 2) function to compare performance with other models 
 
 ###### Bayesian Tuning (optional) #########
 
@@ -351,30 +362,6 @@ xgb_model <- train(xgb_tuned_learner, trainTask)
 # Make a new prediction
 pred <- predict(xgb_model, testTask)
 caret::confusionMatrix (pred$data$response, data.validat.y%>%as.factor())
-
-
-
-
-set.seed(9994040)
-#single tree
-model <- xgboost(data = dtrain,          
-                 max.depth = 4, 
-                 nround = 1, 
-                 eta = 0.3666667,
-                 objective = "binary:logistic", 
-                 gamma = 1.111111,
-                 subsample = 0.9444444,
-                 verbose = 0)
-pred <- predict(model, dtest)
-xgbpred <- ifelse (pred >= 0.5,1,0)
-caret::confusionMatrix (xgbpred%>%as.factor(), data.validat.y%>%as.factor())
-rocxg<-roc(data.validat.y,xgbpred)
-plot(rocxg,print.auc=T, auc.polygon=T, grid=c(0.1, 0.2), 
-     max.auc.polygon=T, auc.polygon.col="skyblue",print.thres=T)
-xgb.plot.tree(model = model)
-
-
-
 
 
 ########---compare auc---##########
