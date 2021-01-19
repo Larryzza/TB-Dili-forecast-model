@@ -1,12 +1,11 @@
 rm(list = ls())
 ######choose data for model#########
 source("function.R")
+load("processed_data.rds")
 
-#com.dat <- read.csv("com.dat.v2.csv")[,-1]
-com.dat <- read.csv("com.dat.v4.csv")[,-1]
 head(com.dat)
-
 com.dat$date%<>%as.Date()
+com.dat$id <- apply(com.dat$id %>% as.matrix, 1, same_length)
 #check data set
 
 cut_date<-"2019-4-1"
@@ -56,7 +55,7 @@ ggplot(data=imp_plot,mapping=aes(x=reorder(Feature, -mean),y=mean,fill=Feature))
   xlab(NULL)+
   ylab("Relative Rmpotortance")+
   theme_few()
-ggsave("rr.tiff",dpi=300,scale=1.3)
+ggsave("rr.tiff",dpi=300,scale=1.9)
 
 ###### feature select #########
 
@@ -104,9 +103,6 @@ model <- xgboost(data = dtrain,
 pred <- predict(model, dtest)
 xgbpred <- ifelse (pred >= 0.5,1,0)
 caret::confusionMatrix (xgbpred%>%as.factor(), data.validat.y%>%as.factor())
-rocxg<-roc(data.validat.y,xgbpred)
-plot(rocxg,print.auc=T, auc.polygon=T, grid=c(0.1, 0.2), 
-     max.auc.polygon=T, auc.polygon.col="skyblue",print.thres=T)
 xgb.plot.tree(model = model)
 
 pred.o <- predict(model, dtrain)
@@ -114,16 +110,48 @@ xgbpred.o <- ifelse (pred.o >= 0.5,1,0)
 caret::confusionMatrix (xgbpred.o%>%as.factor(), data.train.y%>%as.factor())
 
 ###### model evaluation #########
+
+####ROC
+rocxg<-roc(data.validat.y,xgbpred)
+plot(rocxg,print.auc=T, auc.polygon=T, grid=c(0.1, 0.2), 
+     max.auc.polygon=T, auc.polygon.col="skyblue",print.thres=T)
+
+####variables importance
+importance_matrix <- xgb.importance(model = model) 
+xgb.plot.importance(importance_matrix, rel_to_first = TRUE, xlab = "Relative importance")
+
+feature_values <- data.validat.x[,feature_select] %>%
+  as.data.frame() %>%
+  mutate_all(scale) %>%
+  gather(feature, feature_value) %>% 
+  pull(feature_value)
+shap_df <- model %>%
+  predict(newdata = dtest, predcontrib = TRUE) %>%
+  as.data.frame() %>%
+  select(-BIAS) %>%
+  gather(feature, shap_value) %>%
+  mutate(feature_value = feature_values) %>%
+  group_by(feature) %>%
+  mutate(shap_importance = mean(abs(shap_value)))
+ggplot(shap_df, 
+       aes(x = shap_value, 
+           y = reorder(feature, shap_importance))) +
+  ggbeeswarm::geom_quasirandom(groupOnX = FALSE, varwidth = TRUE, 
+                               size = 0.4, alpha = 0.25) +
+  xlab("SHAP value") +
+  ylab(NULL)
+
 ###### evaluate the early warning duration
-data3 <- read_xlsx("建模对象2020.12.30.xlsx",sheet = 1)
-data4 <- read_xlsx("建模对象2020.12.30 -z.xlsx",sheet = 4)
 
 data.frame(xgbpred,data.validat.y) %>%
   mutate(Y_N=ifelse(xgbpred==1&data.validat.y==1,1,0)) -> result_eva
 model.variables$id[model.variables$date>=cut_date] %>% .[result_eva$Y_N==1] -> eva
 eva <- apply(eva%>%as.matrix, 1, same_length)
+data3$id <- apply(data3$id %>% as.matrix, 1, same_length)
+data4$id <- apply(data4$id %>% as.matrix, 1, same_length)
 early_pred <- NULL
 day_back <- 0
+
 
 while (length(eva)>0){
   print(length(eva))
@@ -131,7 +159,7 @@ while (length(eva)>0){
       filter(id==x)%>%select(c(id,alt_value,alt_yn,report_date,start_time))->
       out;return(out)})
   first_time <- lapply(eva%>%as.list(),function(x){data4%>%
-      filter(登记号...1==x)%>%select(c(登记号...1,日期))%>%arrange(日期)->
+      filter(id==x)%>%select(c(id,date))%>%arrange(date)->
       out;return(out[1,])}) 
   first_time_results <- Reduce("rbind",first_time)
   names(first_time_results) <- c("id","start_time")
@@ -154,7 +182,7 @@ while (length(eva)>0){
   
   data.frame(id=eva) %>%
     left_join(ALT_results,by="id") %>%
-    left_join(com.dat.v2,by="id") -> eva.dat
+    left_join(com.dat[,-c(1:5,21,22)],by="id") -> eva.dat
   
   med_dose <- lapply(eva%>%as.list(), get_dose)
   
@@ -182,7 +210,7 @@ while (length(eva)>0){
   
   eva.dat.v2<-merge_dose(med_dose_exact)
   eva.dat.v2$id<-apply(eva.dat.v2$id%>%as.matrix,1,same_length)
-  eva.dat.v2<-left_join(eva.dat.v2,eva.dat[,-c(13:16)],by="id")
+  eva.dat.v2<-left_join(eva.dat.v2,eva.dat,by="id")
   early.end<-which(apply(eva.dat.v2%>%select(c(PZA,RFP,EMB,INH)),1,sum)==0)%>%length()
   if(early.end>0){
     eva<-eva[-which(apply(eva.dat.v2%>%select(c(PZA,RFP,EMB,INH)),1,sum)==0)]
@@ -205,34 +233,6 @@ hist(early_pred, breaks=25, xlim=c(0,100), col=rgb(1,0,0,0.5), ylim = c(0,15),
 dev.off()
 summary(early_pred)
 length(early_pred)
-
-rocxg<-roc(data.validat.y,xgbpred)
-plot(rocxg,print.auc=T, auc.polygon=T, grid=c(0.1, 0.2), 
-     max.auc.polygon=T, auc.polygon.col="skyblue",print.thres=T)
-
-importance_matrix <- xgb.importance(model = model) 
-xgb.plot.importance(importance_matrix, rel_to_first = TRUE, xlab = "Relative importance")
-
-feature_values <- data.validat.x[,feature_select] %>%
-  as.data.frame() %>%
-  mutate_all(scale) %>%
-  gather(feature, feature_value) %>% 
-  pull(feature_value)
-shap_df <- model %>%
-  predict(newdata = dtest, predcontrib = TRUE) %>%
-  as.data.frame() %>%
-  select(-BIAS) %>%
-  gather(feature, shap_value) %>%
-  mutate(feature_value = feature_values) %>%
-  group_by(feature) %>%
-  mutate(shap_importance = mean(abs(shap_value)))
-ggplot(shap_df, 
-       aes(x = shap_value, 
-           y = reorder(feature, shap_importance))) +
-  ggbeeswarm::geom_quasirandom(groupOnX = FALSE, varwidth = TRUE, 
-                               size = 0.4, alpha = 0.25) +
-  xlab("SHAP value") +
-  ylab(NULL)
 
 
 ############# following parts include 

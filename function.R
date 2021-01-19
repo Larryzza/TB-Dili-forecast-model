@@ -97,8 +97,8 @@ get_dose<-function(see){
   test_day <- last_time_results[which(last_time_results$id==see),]%>%select(-id)
   if(test_day$report_date>test_day$start_time){
     med_result %>% 
-    filter(id==see,sign_date<test_day$report_date) %>% 
-    cbind(test_day) -> select_med
+      filter(id==see,sign_date<test_day$report_date) %>% 
+      cbind(test_day) -> select_med
   }else{
     med_result %>% 
       filter(id==see,sign_date==test_day$start_time) %>% 
@@ -207,7 +207,7 @@ auc_function_train<-function(folds){
   dtest <- xgb.DMatrix(data = data.new[folds,]%>%as.matrix(),
                        label= data.train.y[folds]%>%as.matrix())
   test_labels <- data.train.y[folds]
-
+  
   model <- xgboost(data = dtrain,          
                    #max.depth = 4, 
                    nround = 1, 
@@ -279,17 +279,3 @@ scoringFunction <- function(subsample) {
     )
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
