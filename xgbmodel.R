@@ -92,7 +92,7 @@ dtest <- xgb.DMatrix(data = data.validat.x[,feature_select]%>%as.matrix(),
 ######### model (without Tuning) ##########
 #single tree
 model <- xgboost(data = dtrain,          
-                 #max.depth = 4, 
+                 #max.depth = 3, 
                  nround = 1,
                  #gamma = 1,
                  objective = "binary:logistic", 
@@ -234,7 +234,77 @@ dev.off()
 summary(early_pred)
 length(early_pred)
 
+library(DiagrammeR)
+library(DiagrammeRsvg)
+library(rsvg)
 
+grViz("
+digraph box_and_circles {
+graph [layout = dot;splines=line;
+overlap = false;nodesep=0.3;rankdir=LR]
+
+node [shape=box;penwidth=1.5;fixedsize = true;width = 1.2]
+11 [label='ALT_updated']
+22 [label='EMB']
+21 [label='ALT_rate']
+34 [label='ALT_updated']
+33 [label='ALT_updated']
+32 [label='PZA']
+31 [label='ALT_updated']
+41 [label='ALTt_rate']
+42 [label='ALT_rate']
+43 [label='ALT_updated']
+44 [label='ALT_rate']
+46 [label='PZA']
+52 [label='EMB']
+54 [label='EMB']
+56 [label='PZA']
+65 [label='EMB']
+66 [label='ALT_updated']
+
+node [shape = circle;fixedsize = true;width = 0.5]
+45 [label='Yes' color=red]
+47 [label='No']
+48 [label='Yes'color=red]
+51 [label='No']
+53 [label='Yes'color=red]
+55 [label='No']
+57 [label='No']
+58 [label='Yes'color=red]
+59 [label='Yes'color=red]
+510 [label='No']
+61 [label='No']
+62 [label='Yes'color=red]
+63 [label='No']
+64 [label='Yes'color=red]
+71 [label='Yes'color=red]
+72 [label='No']
+73 [label='No']
+74 [label='Yes'color=red]
+
+11->21[label='< 25.5' color=gray];11->22[label='\u2265 25.5']
+21->31[label='< 0.26' color=gray];21->32[label='\u2265 0.26']
+22->33[label='< 90.38'];22->34[label='\u2265 90.38' color=gray]
+31->41[label='< 19.5'color=gray];31->42[label='\u2265 19.5']
+32->43[label='< 26.25'];32->44[label='\u2265 26.25'color=gray]
+33->45[label='< 26.5'];33->46[label='\u2265 26.5'color=gray]
+34->47[label='< 27.5'color=gray];34->48[label='\u2265 27.5']
+41->51[label='< 0.16'color=gray];41->52[label='\u2265 0.16']
+52->61[label='\u2265 81.34'color=gray];52->62[label='< 81.34']
+42->53[label='< -0.11'color=gray];42->54[label='\u2265 -0.11']
+54->63[label='\u2265 17.60'color=gray];54->64[label='< 17.60']
+43->55[label='< 11.5'color=gray];43->56[label='\u2265 11.5']
+56->65[label='\u2265 3.40'color=gray];56->66[label='< 3.40']
+65->71[label='\u2265 1.58'color=gray];65->72[label='< 1.58']
+66->73[label='< 22'color=gray];66->74[label='\u2265 22']
+44->57[label='\u2265 0.28'color=gray];44->58[label='< 0.28']
+46->59[label='\u2265 1.75'color=gray];46->510[label='< 1.75']
+}")->treegraph
+treegraph%>%
+  export_svg %>% 
+  charToRaw %>% 
+  #rsvg_pdf("tree.pdf") %>%
+  rsvg_png("tree.png",width = 6000, height = 3500)
 ############# following parts include 
 ############# 1) 2 tuning functions (optinal)
 ############# 2) function to compare performance with other models 
@@ -316,7 +386,7 @@ xgb_learner <- makeLearner(
     objective = "binary:logistic",
     eval_metric = "error",
     nrounds = 1,
-    max_depth = 4,
+    max_depth = 3,
     eta = 0.3
   )
 )
@@ -337,7 +407,6 @@ xgb_params <- makeParamSet(
   makeNumericParam("subsample", lower = .5, upper = 1)
 )
 
-#control <- makeTuneControlRandom(maxit = 5000)
 control <- makeTuneControlGrid(resolution = 30)
 
 # Create a description of the resampling plan
@@ -371,7 +440,8 @@ library(e1071)
 library("pROC")
 library(caret)
 miss <- function(x){sum(is.na(x))/length(x)*100}
-apply(data.train.x,2,miss)
+na_table <- apply(com.dat,2,miss)
+write.csv(na_table,"na_table.csv")
 
 data.train.x<-model.variables[model.variables$date<cut_date,] %>% select(-c(id,date,Duration,days_dif))
 data.train.y<-model.y[model.variables$date<cut_date]
@@ -386,7 +456,7 @@ tempData <- mice(data.train.x,m=5,maxit=5,meth='pmm')
 imputed <- complete(tempData)
 
 A<-NULL;B<-NULL;C<-NULL;D<-NULL;E<-NULL;Ff<-NULL
-for(i in 1:300){
+for(i in 1:100){
   print(paste0(i,"%"))
   set.seed(1e7-i)
   folds <- createFolds(factor(data.train.y), k = 10, list = T)
@@ -412,7 +482,7 @@ for(i in 1:300){
                          label= data.train.y[x]%>%as.matrix())
     test_labels <- data.train.y[x]
     model <- xgboost(data = dtrain,          
-                     max.depth = 4, 
+                     #max.depth = 3, 
                      nround = 1, 
                      objective = "binary:logistic", 
                      verbose = 0)
@@ -429,7 +499,7 @@ for(i in 1:300){
                          label= data.train.y[x]%>%as.matrix())
     test_labels <- data.train.y[x]
     model <- xgboost(data = dtrain,          
-                     max.depth = 4, 
+                     #max.depth = 3, 
                      nround = 100, 
                      objective = "binary:logistic", 
                      verbose = 0)
@@ -474,7 +544,7 @@ for(i in 1:300){
   e<-Reduce("rbind",e)
   E<-rbind(E,e)
   
-  set.seed(1e7-i)
+  'set.seed(1e7-i)
   f<-lapply(folds, function(x){
     dtrain <- xgb.DMatrix(data = data.train.x[-x,feature_select]%>%as.matrix(),
                           label= data.train.y[-x]%>%as.matrix())
@@ -482,18 +552,18 @@ for(i in 1:300){
                          label= data.train.y[x]%>%as.matrix())
     test_labels <- data.train.y[x]
     model <- xgboost(data = dtrain,          
-                     max.depth = 4, 
+                     max.depth = 3, 
                      nround = 1, 
                      eta = 0.3,
                      objective = "binary:logistic", 
-                     gamma = 3.448276,
+                     gamma = 4.482759,
                      min_child_weight = 1.827586,
-                     subsample = 0.8275862,
+                     subsample = 0.9655172,
                      verbose = 0)
     pred <- predict(model, dtest)
     return(data.frame(pred,test_labels))})
   f<-Reduce("rbind",f)
-  Ff<-rbind(Ff,f)}
+  Ff<-rbind(Ff,f)'}
 
 rocglm<-roc(A$test_labels,A$p)
 rocxgs<-roc(B$test_labels,B$p)
