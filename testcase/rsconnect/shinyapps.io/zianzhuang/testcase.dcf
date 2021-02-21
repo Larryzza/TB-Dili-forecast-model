@@ -1,0 +1,10 @@
+name: testcase
+title:
+username:
+account: zianzhuang
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3674563
+bundleId: 4253752
+url: https://zianzhuang.shinyapps.io/testcase/
+when: 1613950488.36232
