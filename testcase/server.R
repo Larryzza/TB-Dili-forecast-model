@@ -45,7 +45,7 @@ server <- function(input, output) {
         data_input <- data_input %>% 
             select(-c(edu,result)) %>% 
             cbind(model.matrix(~edu-1, model.frame(~edu-1, 
-                                                   com.dat, 
+                                                   data_input, 
                                                    na.action=na.pass)))
         dtest <- xgb.DMatrix(data = data_input %>%
                                  select(c(model[["feature_names"]])) %>%
