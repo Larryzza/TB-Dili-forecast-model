@@ -10,7 +10,7 @@ library(pROC)
 library(mlr)
 library(iml)
 library(DiagrammeR)
-library(xgboostExplainer)
+#library(xgboostExplainer)
 library(ParBayesianOptimization)
 library(doParallel)
 library(ggbeeswarm)
@@ -18,6 +18,9 @@ library(ggthemes)
 library(wesanderson)
 library(RColorBrewer)
 library(randomForest)
+library(DiagrammeR)
+library(DiagrammeRsvg)
+library(rsvg)
 #####----date processing---######
 date_function<-function(input){
   input$date[grepl("-",input$date)==F] <- input$date[grepl("-",input$date)==F] %>% 
@@ -47,8 +50,10 @@ dig_alts<-function(see){
       temp.cut <- see$report_date[is.na(see$alt_yn)==F][1]-cut_off
       see <- filter(see,report_date<=temp.cut)
       if(length(see$id)>=2){
-        increase<-see$alt_value[length(see$id)]-see$alt_value[length(see$id)-1]
-        duration.temp<-see$report_date[length(see$id)]-see$report_date[length(see$id)-1]
+        increase<-see$alt_value[length(see$id)]-
+          see$alt_value[length(see$id)-1]
+        duration.temp<-see$report_date[length(see$id)]-
+          see$report_date[length(see$id)-1]
         rate <- increase/(duration.temp%>%as.numeric())
         near <- see$alt_value[length(see$id)]
         test_date <- see$report_date[length(see$report_date)]
@@ -59,8 +64,10 @@ dig_alts<-function(see){
       }
     }else{
       if(length(see$id)>=2){
-        increase<-see$alt_value[length(see$id)]-see$alt_value[length(see$id)-1]
-        duration.temp<-see$report_date[length(see$id)]-see$report_date[length(see$id)-1]
+        increase<-see$alt_value[length(see$id)]-
+          see$alt_value[length(see$id)-1]
+        duration.temp<-see$report_date[length(see$id)]-
+          see$report_date[length(see$id)-1]
         rate <- increase/(duration.temp%>%as.numeric())
         near <- see$alt_value[length(see$id)]
         test_date <- see$report_date[length(see$report_date)]
@@ -130,7 +137,9 @@ get_exact_dose_list<-function(see){
 }
 
 sort_med<-function(see){
-  duration<-(see$report_date[1]%>%as.Date()-see$sign_date%>%as.Date()%>%min())%>%as.numeric()
+  duration<-(see$report_date[1]%>%
+               as.Date()-see$sign_date%>%
+               as.Date()%>%min())%>%as.numeric()
   id<-see$id[1]
   see %>% 
     group_by(type) %>% 
@@ -215,7 +224,8 @@ auc_function_train<-function(folds){
                    verbose = 0)
   pred <- predict(model, dtest) 
   xgbpred <- ifelse (pred >= 0.5,1,0)
-  error.rate <- confusionMatrix (xgbpred%>%as.factor(), data.train.y[folds]%>%as.factor())
+  error.rate <- confusionMatrix (xgbpred%>%as.factor(), 
+                                 data.train.y[folds]%>%as.factor())
   roc_l <- roc(test_labels,pred)
   auc_value <- auc(roc_l)
   return(auc_value)

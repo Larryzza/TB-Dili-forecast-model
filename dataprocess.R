@@ -28,8 +28,8 @@ com.dat$gender[which(com.dat$gender=="男")]<-1
 com.dat$gender[which(com.dat$gender=="女")]<-0
 
 com.dat$edu[which(com.dat$edu %in% c("文盲","小学","初中"))]<-"edu.1"
-com.dat$edu[which(com.dat$edu %in% c("大专","高中","中专"))]<-"edu.2"
-com.dat$edu[which(com.dat$edu %in% c("本科","博士及以上","硕士"))]<-"edu.3"
+com.dat$edu[which(com.dat$edu %in% c("高中","中专"))]<-"edu.2"
+com.dat$edu[which(com.dat$edu %in% c("大专","本科","博士及以上","硕士"))]<-"edu.3"
 
 ###2?  hepatitis B
 com.dat$hepatitis.B[which(is.na(com.dat$hepatitis.B)==F)]<-1
@@ -227,6 +227,7 @@ hist(com.dat.v4$days_dif[com.dat.v4$result==1], breaks=50,
      xlim=c(0,300), col=rgb(1,0,0,0.5), 
      xlab="days from anti-tuberculous therapy",ylab="number of TB-DILI cases", main=NULL)
 dev.off()
+com.dat.v4$days_dif[com.dat.v4$result==1]%>%summary()
 #####----descriptive statistics ---######
 table.ref<-com.dat.v4
 varsToFactor <- c("gender", "edu", "hepatitis.B", "plan","diabetes")

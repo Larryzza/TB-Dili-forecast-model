@@ -15,13 +15,16 @@ com.dat$result[com.dat$date<cut_date]%>%table()%>%prop.table()
 #com.dat$gender%<>%as.numeric();com.dat$hepatitis.B%<>%as.numeric()
 model.variables <- com.dat %>% 
   select(-c(edu,result,plan)) %>% 
-  cbind(model.matrix(~edu-1, model.frame(~edu-1, com.dat, na.action=na.pass)))%>%
+  cbind(model.matrix(~edu-1, 
+                     model.frame(~edu-1, com.dat, na.action=na.pass)))%>%
   select(-c(eduedu.1))
 model.y <- com.dat$result %>% as.numeric()
 
-data.train.x<-model.variables[model.variables$date<cut_date,] %>% select(-c(id,date,Duration,days_dif))
+data.train.x<-model.variables[model.variables$date<cut_date,] %>% 
+  select(-c(id,date,Duration,days_dif))
 data.train.y<-model.y[model.variables$date<cut_date]
-data.validat.x<-model.variables[model.variables$date>=cut_date,] %>% select(-c(id,date,Duration,days_dif))
+data.validat.x<-model.variables[model.variables$date>=cut_date,] %>% 
+  select(-c(id,date,Duration,days_dif))
 data.validat.y<-model.y[model.variables$date>=cut_date]
 
 
@@ -48,7 +51,8 @@ imp_plot <- read.csv("importance_sum.csv")[,-1]
 imp_plot <- imp_plot[1:10,]
 imp_plot$Feature%<>%as.factor()
 
-ggplot(data=imp_plot,mapping=aes(x=reorder(Feature, -mean),y=mean,fill=Feature))+
+ggplot(data=imp_plot,
+       mapping=aes(x=reorder(Feature, -mean),y=mean,fill=Feature))+
   geom_bar(stat="identity")+
   scale_fill_brewer(palette = "RdBu") +
   #scale_fill_manual(values =wes_palette(10, name = "Royal1", type = "continuous"))+
@@ -82,6 +86,7 @@ write.csv(feature_select[1:which.max(auc.comb$auc_new)],"feature_select.csv")
 
 
 ###### prepare train/test data set #########
+
 feature_select <- read.csv("feature_select.csv")[,2]%>%as.character()
 
 dtrain <- xgb.DMatrix(data = data.train.x[,feature_select]%>%as.matrix(),
@@ -89,17 +94,19 @@ dtrain <- xgb.DMatrix(data = data.train.x[,feature_select]%>%as.matrix(),
 dtest <- xgb.DMatrix(data = data.validat.x[,feature_select]%>%as.matrix(),
                      label= data.validat.y%>%as.matrix())
 
+
 ######### model (without Tuning) ##########
 #single tree
 model <- xgboost(data = dtrain,          
                  #max.depth = 3, 
                  nround = 1,
                  #gamma = 1,
+                 eval_metric = "logloss",
                  objective = "binary:logistic", 
                  verbose = 0)
 
 #results
-
+save(model, file = "model.rds")
 pred <- predict(model, dtest)
 xgbpred <- ifelse (pred >= 0.5,1,0)
 caret::confusionMatrix (xgbpred%>%as.factor(), data.validat.y%>%as.factor())
@@ -118,7 +125,8 @@ plot(rocxg,print.auc=T, auc.polygon=T, grid=c(0.1, 0.2),
 
 ####variables importance
 importance_matrix <- xgb.importance(model = model) 
-xgb.plot.importance(importance_matrix, rel_to_first = TRUE, xlab = "Relative importance")
+xgb.plot.importance(importance_matrix, 
+                    rel_to_first = TRUE, xlab = "Relative importance")
 
 feature_values <- data.validat.x[,feature_select] %>%
   as.data.frame() %>%
@@ -145,7 +153,8 @@ ggplot(shap_df,
 
 data.frame(xgbpred,data.validat.y) %>%
   mutate(Y_N=ifelse(xgbpred==1&data.validat.y==1,1,0)) -> result_eva
-model.variables$id[model.variables$date>=cut_date] %>% .[result_eva$Y_N==1] -> eva
+model.variables$id[model.variables$date>=cut_date] %>%
+  .[result_eva$Y_N==1] -> eva
 eva <- apply(eva%>%as.matrix, 1, same_length)
 data3$id <- apply(data3$id %>% as.matrix, 1, same_length)
 data4$id <- apply(data4$id %>% as.matrix, 1, same_length)
@@ -165,7 +174,8 @@ while (length(eva)>0){
   names(first_time_results) <- c("id","start_time")
   last_time <- lapply(ALT_result, dig_time_lable)
   last_time_results <- Reduce("rbind",last_time)
-  last_time_results<-left_join(last_time_results[,-5],first_time_results,by="id") 
+  last_time_results<-left_join(last_time_results[,-5],
+                               first_time_results,by="id") 
   
   day_back <- day_back+1
   last_time_results$report_date <- last_time_results$report_date-day_back
@@ -233,10 +243,6 @@ hist(early_pred, breaks=25, xlim=c(0,100), col=rgb(1,0,0,0.5), ylim = c(0,15),
 dev.off()
 summary(early_pred)
 length(early_pred)
-
-library(DiagrammeR)
-library(DiagrammeRsvg)
-library(rsvg)
 
 grViz("
 digraph box_and_circles {
@@ -443,9 +449,11 @@ miss <- function(x){sum(is.na(x))/length(x)*100}
 na_table <- apply(com.dat,2,miss)
 write.csv(na_table,"na_table.csv")
 
-data.train.x<-model.variables[model.variables$date<cut_date,] %>% select(-c(id,date,Duration,days_dif))
+data.train.x<-model.variables[model.variables$date<cut_date,] %>% 
+  select(-c(id,date,Duration,days_dif))
 data.train.y<-model.y[model.variables$date<cut_date]
-data.validat.x<-model.variables[model.variables$date>=cut_date,] %>% select(-c(id,date,Duration,days_dif))
+data.validat.x<-model.variables[model.variables$date>=cut_date,] %>% 
+  select(-c(id,date,Duration,days_dif))
 data.validat.y<-model.y[model.variables$date>=cut_date]
 
 data.train.x<-rbind(data.train.x,data.validat.x)
@@ -493,9 +501,9 @@ for(i in 1:100){
   
   set.seed(1e7-i)
   c<-lapply(folds, function(x){
-    dtrain <- xgb.DMatrix(data = data.train.x[-x,feature_select]%>%as.matrix(),
+    dtrain <- xgb.DMatrix(data = data.train.x[-x,]%>%as.matrix(),
                           label= data.train.y[-x]%>%as.matrix())
-    dtest <- xgb.DMatrix(data = data.train.x[x,feature_select]%>%as.matrix(),
+    dtest <- xgb.DMatrix(data = data.train.x[x,]%>%as.matrix(),
                          label= data.train.y[x]%>%as.matrix())
     test_labels <- data.train.y[x]
     model <- xgboost(data = dtrain,          
@@ -570,18 +578,19 @@ rocxgs<-roc(B$test_labels,B$p)
 rocxg<-roc(C$test_labels,C$p)
 rocrfs<-roc(D$test_labels,D$p)
 rocrf<-roc(E$test_labels,E$p)
-rocxgst<-roc(Ff$test_labels,Ff$p)
+#rocxgst<-roc(Ff$test_labels,Ff$p)
 
+tiff("compare_model.tiff",width = 1000,height = 1000,units = "px", pointsize = 22)
 plot(rocglm,col = "dark blue",lty=1,lwd=2)
 plot(rocxg,add = TRUE,col = "orange",lty=1,lwd=2)
 plot(rocxgs,add = TRUE,col = "dark red",lty=1,lwd=2)
 plot(rocrfs,add = TRUE,col = "pink",lty=1,lwd=2)
 plot(rocrf,add = TRUE,col = "dark green",lty=1,lwd=2)
-legend("bottomright",legend=c("xgboost(aic:0.9274)",
-                              "single tree xgboost(aic:0.9009)",
-                              "GLM(aic:0.8679)",
-                              "random forests(aic:0.8796)",
-                              "single tree random forests(aic:0.7553)"),
-       col=c("orange","dark red","dark blue","dark green","pink"),
+legend("bottomright",legend=c("XGBoost (AUC:0.94)",
+                              "Single tree XGBoost (AUC:0.91)",
+                              "Random forests (AUC:0.88)",
+                              "Generalized linear model (AUC:0.87)",
+                              "Single tree random forests (AUC:0.77)"),
+       col=c("orange","dark red","dark green","dark blue","pink"),
        lty=1,lwd=2,cex=0.8,bty="n")
 dev.off()
