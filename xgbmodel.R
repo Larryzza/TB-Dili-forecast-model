@@ -160,7 +160,14 @@ data3$id <- apply(data3$id %>% as.matrix, 1, same_length)
 data4$id <- apply(data4$id %>% as.matrix, 1, same_length)
 early_pred <- NULL
 day_back <- 0
+set_window <- 300
 
+dose_ref <- data.frame(EMB = model.variables$EMB/model.variables$Duration,
+                       INH = model.variables$INH/model.variables$Duration,
+                       PZA = model.variables$PZA/model.variables$Duration,
+                       RFP = model.variables$RFP/model.variables$Duration,
+                       SS = model.variables$SS/model.variables$Duration,
+                       id = model.variables$id)
 
 while (length(eva)>0){
   print(length(eva))
@@ -199,7 +206,7 @@ while (length(eva)>0){
   exact_dose_list <- lapply(med_dose, get_exact_dose_list)
   
   med_dose_sort <-lapply(exact_dose_list,sort_med)
-  med_dose_sorts <- Reduce("rbind",med_dose_sort)
+  med_dose_sorts <- Reduce("rbind", med_dose_sort)
   
   med_dose_sorts<-med_dose_sort[[1]]
   if(length(med_dose_sort)>1){
@@ -218,31 +225,43 @@ while (length(eva)>0){
   if(length(med_dose_sort)==1)med_dose_exact<-t(med_dose_exact)
   med_dose_exact%<>%as.data.frame()
   
-  eva.dat.v2<-merge_dose(med_dose_exact)
+  eva.dat.v2 <- merge_dose(med_dose_exact) %>% 
+    relocate(id) %>% select(-days_dif)
+  col_temp <- names(eva.dat.v2)[2:dim(eva.dat.v2)[2]]
+  eva.dat.v2[,col_temp] <- eva.dat.v2[,col_temp] -
+    dose_ref[which(dose_ref$id%>%as.numeric %in% eva.dat.v2$id),
+             col_temp]*day_back
   eva.dat.v2$id<-apply(eva.dat.v2$id%>%as.matrix,1,same_length)
   eva.dat.v2<-left_join(eva.dat.v2,eva.dat,by="id")
-  early.end<-which(apply(eva.dat.v2%>%select(c(PZA,RFP,EMB,INH)),1,sum)==0)%>%length()
+  early.end<-which((eva.dat.v2$Duration-day_back)<=0)%>%length()
+  #print(eva.dat.v2$days_dif.x)
   if(early.end>0){
-    eva<-eva[-which(apply(eva.dat.v2%>%select(c(PZA,RFP,EMB,INH)),1,sum)==0)]
-    eva.dat.v2<-eva.dat.v2[-which(apply(eva.dat.v2%>%select(c(PZA,RFP,EMB,INH)),1,sum)==0),]
+    eva<-eva[-which((eva.dat.v2$Duration-day_back)<=0)]
+    eva.dat.v2<-eva.dat.v2[-which((eva.dat.v2$Duration-day_back)<=0),]
   }
   if(eva%>%length()>0){
     dtest <- xgb.DMatrix(data = eva.dat.v2[,feature_select]%>%as.matrix(),
                          label= eva.dat.v2$result%>%as.matrix())
     pred <- predict(model, dtest)
     xgbpred <- ifelse (pred >= 0.5,1,0)
-    early_pred<-c(early_pred,rep(day_back,(which(xgbpred==0)%>%length()+early.end)))
+    early_pred<-c(early_pred,rep(day_back,
+                                 (which(xgbpred==0)%>%length()+early.end)))
   }else{
     early_pred<-c(early_pred,rep(day_back,early.end))
   }
   if(which(xgbpred==0)%>%length()>0)eva <- eva[-which(xgbpred==0)]
+  #print(eva.dat.v2[1:5,1:4])
 }
+summary(early_pred)
+
 tiff("pred_horizon.tiff",width = 1000,height = 700,units = "px", pointsize = 22)
-hist(early_pred, breaks=25, xlim=c(0,100), col=rgb(1,0,0,0.5), ylim = c(0,15),
+hist(early_pred, breaks=25, xlim=c(0,70), col=rgb(1,0,0,0.5), ylim = c(0,15),
      xlab="days of early warning",ylab="number of TB-DILI cases", main=NULL)
 dev.off()
 summary(early_pred)
 length(early_pred)
+
+
 
 grViz("
 digraph box_and_circles {
@@ -492,6 +511,7 @@ for(i in 1:100){
     model <- xgboost(data = dtrain,          
                      #max.depth = 3, 
                      nround = 1, 
+                     eval_metric = "logloss",
                      objective = "binary:logistic", 
                      verbose = 0)
     pred <- predict(model, dtest)
@@ -509,6 +529,7 @@ for(i in 1:100){
     model <- xgboost(data = dtrain,          
                      #max.depth = 3, 
                      nround = 100, 
+                     eval_metric = "logloss",
                      objective = "binary:logistic", 
                      verbose = 0)
     pred <- predict(model, dtest)

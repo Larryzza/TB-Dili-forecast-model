@@ -43,7 +43,7 @@ dig_alts<-function(see){
     see$start_time <- first_time_results$start_time[which(first_time_results$id==see$id[1])]
     see$report_date %<>% as.Date()
     see$start_time %<>% as.Date()
-    see %<>% filter((see$report_date-see$start_time)<=300)
+    see %<>% filter((see$report_date-see$start_time)<=set_window)
     id <- see$id[1]
     test_date <- NA
     if(which(is.na(see$alt_yn)==F)%>%length()>0){
@@ -86,7 +86,7 @@ dig_time_lable<-function(see){
   see$start_time <- first_time_results$start_time[which(first_time_results$id==see$id[1])]
   see$report_date %<>% as.Date()
   see$start_time %<>% as.Date()
-  see %<>% filter((see$report_date-see$start_time)<=300)
+  see %<>% filter((see$report_date-see$start_time)<=set_window)
   if(length(see$id)>1){
     if(which(is.na(see$alt_yn)==F)%>%length()>0){
       out<-see[which(is.na(see$alt_yn)==F)[1],]
@@ -204,6 +204,7 @@ importance_function<-function(dtrain){
   model <- xgboost(data = dtrain, # the data           
                    #max.depth = 4, # the maximum depth of each decision tree
                    nround = 1, # number of boosting rounds
+                   eval_metric = 'logloss',
                    objective = "binary:logistic", # the objective function
                    verbose = 0)
   importance_matrix <- xgb.importance(model = model) 
@@ -220,6 +221,7 @@ auc_function_train<-function(folds){
   model <- xgboost(data = dtrain,          
                    #max.depth = 4, 
                    nround = 1, 
+                   eval_metric = 'logloss',
                    objective = "binary:logistic", 
                    verbose = 0)
   pred <- predict(model, dtest) 
