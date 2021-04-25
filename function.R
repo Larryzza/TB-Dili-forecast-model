@@ -83,6 +83,7 @@ dig_alts<-function(see){
 
 dig_time_lable<-function(see){
   #print(see$id[1])
+  out <- NULL
   see$start_time <- first_time_results$start_time[which(first_time_results$id==see$id[1])]
   see$report_date %<>% as.Date()
   see$start_time %<>% as.Date()
