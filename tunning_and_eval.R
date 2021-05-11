@@ -332,6 +332,22 @@ rocrfs<-roc(D$test_labels,D$p)
 rocrf<-roc(E$test_labels,E$p)
 #rocxgst<-roc(Ff$test_labels,Ff$p)
 
+includ <- cbind(c(1, rep(743, 100) %>% cumsum %>% +1)[-101],
+                rep(743, 100) %>% cumsum)
+.find_roc <- function(includ, input){
+  #input <- A
+  temp <- input[includ[1]:includ[2],]
+  roc(temp$test_labels,temp$p)
+  print(includ)
+  return(roc(temp$test_labels,temp$p)$auc)
+}
+
+result_rocglm <- apply(includ,1, .find_roc, input=A) %>% quantile(.,c(0.025,0.975))
+result_rocxgs <- apply(includ,1, .find_roc, input=B) %>% quantile(.,c(0.025,0.975))
+result_rocxg <- apply(includ,1, .find_roc, input=C) %>% quantile(.,c(0.025,0.975))
+result_rocrfs <- apply(includ,1, .find_roc, input=D) %>% quantile(.,c(0.025,0.975))
+result_rocrf <- apply(includ,1, .find_roc, input=E) %>% quantile(.,c(0.025,0.975))
+
 tiff("compare_model.tiff",width = 1000,height = 1000,units = "px", pointsize = 22)
 plot(rocglm,col = "dark blue",lty=1,lwd=2)
 plot(rocxg,add = TRUE,col = "orange",lty=1,lwd=2)

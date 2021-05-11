@@ -27,7 +27,6 @@ data.validat.x<-model.variables[model.variables$date>=cut_date,] %>%
   select(-c(id,date,Duration,days_dif))
 data.validat.y<-model.y[model.variables$date>=cut_date]
 
-
 # Folds are created on the basis of target variable
 
 ###### get order of importance #########
@@ -57,7 +56,7 @@ ggplot(data=imp_plot,
   scale_fill_brewer(palette = "RdBu") +
   #scale_fill_manual(values =wes_palette(10, name = "Royal1", type = "continuous"))+
   xlab(NULL)+
-  ylab("Relative Rmpotortance")+
+  ylab("Relative importancee")+
   theme_few()
 ggsave("rr.tiff",dpi=300,scale=1.9)
 
@@ -330,3 +329,10 @@ treegraph%>%
   charToRaw %>% 
   #rsvg_pdf("tree.pdf") %>%
   rsvg_png("tree.png",width = 6000, height = 3500)
+
+
+data.train.x<-rbind(data.train.x,data.validat.x)
+data.train.y<-c(data.train.y,data.validat.y)
+save(data.train.x, data.train.y, file = "sen_data_0.rds")
+
+
