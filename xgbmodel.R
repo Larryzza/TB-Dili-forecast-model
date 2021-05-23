@@ -48,17 +48,25 @@ importance_combine %>%
 write.csv(importance_sum,"importance_sum.csv")
 imp_plot <- read.csv("importance_sum.csv")[,-1]
 imp_plot <- imp_plot[1:10,]
+
+imp_plot$Feature[1]<-"most recent \n ALT"
+imp_plot$Feature[2]<-"ALT \n change rate"
+
 imp_plot$Feature%<>%as.factor()
+
+
 
 ggplot(data=imp_plot,
        mapping=aes(x=reorder(Feature, -mean),y=mean,fill=Feature))+
   geom_bar(stat="identity")+
   scale_fill_brewer(palette = "RdBu") +
+  scale_y_sqrt()+
   #scale_fill_manual(values =wes_palette(10, name = "Royal1", type = "continuous"))+
-  xlab(NULL)+
-  ylab("Relative importancee")+
-  theme_few()
-ggsave("rr.tiff",dpi=300,scale=1.9)
+  xlab("Variables")+
+  ylab("Relative importance")+
+  theme_bw() + theme(legend.position = "none")
+  
+ggsave("rr.tiff",dpi=300,scale=1.1)
 
 ###### feature select #########
 
@@ -268,23 +276,23 @@ graph [layout = dot;splines=line;
 overlap = false;nodesep=0.3;rankdir=LR]
 
 node [shape=box;penwidth=1.5;fixedsize = true;width = 1.2]
-11 [label='ALT_updated']
+11 [label='most recent \n ALT']
 22 [label='EMB']
-21 [label='ALT_rate']
-34 [label='ALT_updated']
-33 [label='ALT_updated']
+21 [label='ALT \n change rate']
+34 [label='most recent \n ALT']
+33 [label='most recent \n ALT']
 32 [label='PZA']
-31 [label='ALT_updated']
-41 [label='ALTt_rate']
-42 [label='ALT_rate']
-43 [label='ALT_updated']
-44 [label='ALT_rate']
+31 [label='most recent \n ALT']
+41 [label='ALT \n change rate']
+42 [label='ALT \n change rate']
+43 [label='most recent \n ALT']
+44 [label='ALT \n change rate']
 46 [label='PZA']
 52 [label='EMB']
 54 [label='EMB']
 56 [label='PZA']
 65 [label='EMB']
-66 [label='ALT_updated']
+66 [label='most recent \n ALT']
 
 node [shape = circle;fixedsize = true;width = 0.5]
 45 [label='Yes' color=red]
