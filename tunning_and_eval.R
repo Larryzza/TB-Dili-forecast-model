@@ -214,8 +214,8 @@ tempData <- mice(data.train.x,m=5,maxit=5,meth='pmm')
 imputed <- complete(tempData)
 
 A<-NULL;B<-NULL;C<-NULL;D<-NULL;E<-NULL;Ff<-NULL
-for(i in 1:100){
-  print(paste0(i,"%"))
+for(i in 0){
+  #print(paste0(i*2,"%"))
   set.seed(1e7-i)
   folds <- createFolds(factor(data.train.y), k = 10, list = T)
   
@@ -325,28 +325,18 @@ for(i in 1:100){
   f<-Reduce("rbind",f)
   Ff<-rbind(Ff,f)'}
 
-rocglm<-roc(A$test_labels,A$p)
-rocxgs<-roc(B$test_labels,B$p)
-rocxg<-roc(C$test_labels,C$p)
-rocrfs<-roc(D$test_labels,D$p)
-rocrf<-roc(E$test_labels,E$p)
+rocglm<-roc(A$test_labels,A$p,smooth=T)
+rocxgs<-roc(B$test_labels,B$p,smooth=T)
+rocxg<-roc(C$test_labels,C$p,smooth=T)
+rocrfs<-roc(D$test_labels,D$p,smooth=T)
+rocrf<-roc(E$test_labels,E$p,smooth=T)
 #rocxgst<-roc(Ff$test_labels,Ff$p)
 
-includ <- cbind(c(1, rep(743, 100) %>% cumsum %>% +1)[-101],
-                rep(743, 100) %>% cumsum)
-.find_roc <- function(includ, input){
-  #input <- A
-  temp <- input[includ[1]:includ[2],]
-  roc(temp$test_labels,temp$p)
-  print(includ)
-  return(roc(temp$test_labels,temp$p)$auc)
-}
-
-result_rocglm <- apply(includ,1, .find_roc, input=A) %>% quantile(.,c(0.025,0.975))
-result_rocxgs <- apply(includ,1, .find_roc, input=B) %>% quantile(.,c(0.025,0.975))
-result_rocxg <- apply(includ,1, .find_roc, input=C) %>% quantile(.,c(0.025,0.975))
-result_rocrfs <- apply(includ,1, .find_roc, input=D) %>% quantile(.,c(0.025,0.975))
-result_rocrf <- apply(includ,1, .find_roc, input=E) %>% quantile(.,c(0.025,0.975))
+ci.auc(A$test_labels,A$p)
+ci.auc(B$test_labels,B$p)
+ci.auc(C$test_labels,C$p)
+ci.auc(D$test_labels,D$p)
+ci.auc(E$test_labels,E$p)
 
 tiff("compare_model.tiff",width = 1000,height = 1000,units = "px", pointsize = 22)
 plot(rocglm,col = "dark blue",lty=1,lwd=2)
@@ -354,11 +344,11 @@ plot(rocxg,add = TRUE,col = "orange",lty=1,lwd=2)
 plot(rocxgs,add = TRUE,col = "dark red",lty=1,lwd=2)
 plot(rocrfs,add = TRUE,col = "pink",lty=1,lwd=2)
 plot(rocrf,add = TRUE,col = "dark green",lty=1,lwd=2)
-legend("bottomright",legend=c("XGBoost (AUC:0.94)",
-                              "Single tree XGBoost (AUC:0.91)",
-                              "Random forests (AUC:0.88)",
-                              "Generalized linear model (AUC:0.87)",
-                              "Single tree random forests (AUC:0.77)"),
+legend("bottomright",legend=c("XGBoost (AUC:0.940 (0.924,0.956))",
+                              "Single tree XGBoost (AUC:0.912 (0.890,0.935))",
+                              "Random forests (AUC:0.876 (0.852,0.901))",
+                              "Generalized linear model (AUC:0.861 (0.842,893))",
+                              "Single tree random forests (AUC:0.783 (0.738,0.803))"),
        col=c("orange","dark red","dark green","dark blue","pink"),
-       lty=1,lwd=2,cex=0.8,bty="n")
+       lty=1,lwd=2,cex=0.9,bty="n")
 dev.off()
